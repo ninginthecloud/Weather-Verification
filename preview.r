@@ -9,14 +9,14 @@ library(cluster)
 ## read two images, one forecast and one observation
 forecast.table = read.table(file="E:\\UW\\autumn 2014\\RA\\code\\Data\\DATA_COAMPS\\coamps_ttl_prcp_g2_2005051100_f07.txt_nohead.gz", header = F)
 observation.table = read.table(file="E:\\UW\\autumn 2014\\RA\\code\\Data\\DATA_COAMPS\\coamps_ttl_prcp_g2_2005051100_f24.txt_nohead.gz", header = F)
-colnames(forecast.table)<-c("long","lat","y")
-colnames(observation.table)<-c("long","lat","y")
+colnames(forecast.table)<-c("lat","long","z")
+colnames(observation.table)<-c("lat","long","z")
 str(forecast.table)
 summary(forecast.table)
 mean(forecast.table$V3!=0)#0.3145842
 
 #plot
-pred.plot<-ggplot(data=forecast.table,aes(x=lat,y=long,colour=y))+
+pred.plot<-ggplot(data=forecast.table,aes(x=lat,y=long,colour=z))+
     geom_point()+
     scale_colour_gradient(low="white",high="blue")+
     ggtitle("2005051100_f07 map")
@@ -24,7 +24,7 @@ pdf<-pdf(file="E:\\UW\\autumn 2014\\RA\\report\\predict plot.pdf",width=10,heigh
 pred.plot
 dev.off()
 
-obs.plot<-ggplot(data=forecast.table,aes(x=lat,y=long,colour=y))+
+obs.plot<-ggplot(data=forecast.table,aes(x=lat,y=long,colour=z))+
   geom_point()+
   scale_colour_gradient(low="white",high="blue")+
   ggtitle("2005051100_f24 map")
@@ -35,28 +35,158 @@ grid.arrange(pred.plot,obs.plot,ncol=2)
 
 #cluster
 #combine data together
-wkdata<-data.frame(lat)
-sampled.cluster = agnes(point.sample, diss = F, metric = "euclidean",
+wkdata<-data.frame(lat=c(forecast.table$lat,observation.table$lat),
+                   long=c(forecast.table$long,observation.table$long),
+                   z=c(forecast.table$z,observation.table$z),
+                   group=rep(c("forecast","observation"),c(dim(forecast.table)[1],dim(observation.table)[1])))
+
+
+ #kmeans
+K=100
+clusterk= kmeans(wkdata[,-3:-4],centers=K)
+cluster1 = wkdata[clusterk$cluster==1,]
+#cluster2 = wkdata[clusterk$cluster==2,]
+#cluster3 = wkdata[clusterk$cluster==3,]
+#cluster4 = wkdata[clusterk$cluster==4,]
+
+wkdata$cluster<-clusterk$cluster
+ggplot(data=wkdata,aes(x=long,y=lat,colour=cluster))+
+  geom_point()
+
+  ratio<-rep(0,K)
+  for(i in 1:K){
+	ratio[i]<-mean(wkdata[clusterk$cluster==i,3])
+  }
+ ratio
+ a<-which.max(ratio)
+ 
+ test<-wkdata[clusterk$cluster==a,]
+ 
+ #picture 
+g<-ggplot(data=test[test[,3]>0,],aes(x=long,y=lat,colour=z))+
+  geom_point()+
+  scale_colour_gradient(low="white",high="blue")
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\test plot.pdf",width=10,height=8)  
+g
+dev.off()
+#hierachical clustering
+#average
+result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "euclidean",
                         stand = FALSE, method = "average")
-temp.cutree = cutree(sampled.cluster, 1:nbr.clusts)
-point.count = tapply(source.lab, list(clust.assign, source.lab), length)
-#kmeans
 
+temp.cutree = cutree(result, 1:4)
+test$cut=rep(0,dim(test)[1])
+test$cut[test[,3]>0]<-temp.cutree[,4]
+test$cut<-as.factor(test$cut)
+average<-ggplot()+
+  geom_point(data=test,aes(x=long,y=lat,colour=cut))
+#single
+result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "euclidean",
+                        stand = FALSE, method = "single")
 
+temp.cutree = cutree(result, 1:4)
+test$cut=rep(0,dim(test)[1])
+test$cut[test[,3]>0]<-temp.cutree[,4]
+test$cut<-as.factor(test$cut)
+single<-ggplot()+
+  geom_point(data=test,aes(x=long,y=lat,colour=cut)) 
 
+#complete
+result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "euclidean",
+                        stand = FALSE, method = "complete")
 
+temp.cutree = cutree(result, 1:4)
+test$cut=rep(0,dim(test)[1])
+test$cut[test[,3]>0]<-temp.cutree[,4]
+test$cut<-as.factor(test$cut)
+complete<-ggplot()+
+  geom_point(data=test,aes(x=long,y=lat,colour=cut))
+complete
 
+#wald's method
+result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "euclidean",
+                        stand = FALSE, method = "ward")
 
+temp.cutree = cutree(result, 1:4)
+test$cut=rep(0,dim(test)[1])
+test$cut[test[,3]>0]<-temp.cutree[,4]
+test$cut<-as.factor(test$cut)
+wald<-ggplot()+
+  geom_point(data=test,aes(x=long,y=lat,colour=cut))
+wald
 
+#save plots
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\single.pdf",width=10,height=8)  
+single
+dev.off()
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\average.pdf",width=10,height=8)  
+average
+dev.off()
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\complete.pdf",width=10,height=8)  
+complete
+dev.off()
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\wald.pdf",width=10,height=8)  
+wald
+dev.off()
 
+#measure
+#L1
 
-map<- ggplot()+
-  geom_polygon(data=forecast.table, aes(x=lat, y=long))+
-  scale_fill_manual(values=forecast.table$y,name="y")
+#average
+result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "manhattan",
+                        stand = FALSE, method = "average")
 
-map
-+
-  geom_path(data=circle.data50,aes(x=x,y=y,group=group),color="dark grey")+
-  geom_point(data=NPP[index,],aes(x=long.km,y=lat.km,group=group),color="red",size=4)+
-  geom_text(data = NPP[index,], x = NPP[index,"long.km"], y = NPP[index,"lat.km"]-5, label = NPP[index,"Name"])+
-  ggtitle(paste(factor.interest,"mapping in",NPP[index,"State"]))
+temp.cutree = cutree(result, 1:4)
+test$cut=rep(0,dim(test)[1])
+test$cut[test[,3]>0]<-temp.cutree[,4]
+test$cut<-as.factor(test$cut)
+average<-ggplot()+
+  geom_point(data=test,aes(x=long,y=lat,colour=cut))
+#single
+result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "manhattan",
+                        stand = FALSE, method = "single")
+
+temp.cutree = cutree(result, 1:4)
+test$cut=rep(0,dim(test)[1])
+test$cut[test[,3]>0]<-temp.cutree[,4]
+test$cut<-as.factor(test$cut)
+single<-ggplot()+
+  geom_point(data=test,aes(x=long,y=lat,colour=cut)) 
+
+#complete
+result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "manhattan",
+                        stand = FALSE, method = "complete")
+
+temp.cutree = cutree(result, 1:4)
+test$cut=rep(0,dim(test)[1])
+test$cut[test[,3]>0]<-temp.cutree[,4]
+test$cut<-as.factor(test$cut)
+complete<-ggplot()+
+  geom_point(data=test,aes(x=long,y=lat,colour=cut))
+complete
+
+#wald's method
+result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "manhattan",
+                        stand = FALSE, method = "ward")
+
+temp.cutree = cutree(result, 1:4)
+test$cut=rep(0,dim(test)[1])
+test$cut[test[,3]>0]<-temp.cutree[,4]
+test$cut<-as.factor(test$cut)
+wald<-ggplot()+
+  geom_point(data=test,aes(x=long,y=lat,colour=cut))
+wald
+
+#save plots
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\singleL1.pdf",width=10,height=8)  
+single
+dev.off()
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\averageL1.pdf",width=10,height=8)  
+average
+dev.off()
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\completeL1.pdf",width=10,height=8)  
+complete
+dev.off()
+pdf<-pdf("E:\\UW\\autumn 2014\\RA\\report\\waldL1.pdf",width=10,height=8)  
+wald
+dev.off()
