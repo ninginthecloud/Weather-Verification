@@ -13,18 +13,20 @@ colnames(forecast.table)<-c("lat","long","z")
 colnames(observation.table)<-c("lat","long","z")
 str(forecast.table)
 summary(forecast.table)
-mean(forecast.table$V3!=0)#0.3145842
+mean(forecast.table$z!=0)#0.3145842
 
 #plot
-pred.plot<-ggplot(data=forecast.table,aes(x=lat,y=long,colour=z))+
+pred.plot<-ggplot(data=forecast.table,aes(x=long,y=lat,colour=log(z)))+
     geom_point()+
-    scale_colour_gradient(low="white",high="blue")+
+    scale_colour_gradient(low="green",high="red")+
     ggtitle("2005051100_f07 map")
+	pred.plot
+	
 pdf<-pdf(file="E:\\UW\\autumn 2014\\RA\\report\\predict plot.pdf",width=10,height=8)
 pred.plot
 dev.off()
 
-obs.plot<-ggplot(data=forecast.table,aes(x=lat,y=long,colour=z))+
+obs.plot<-ggplot(data=observation.table,aes(x=long,y=lat,colour=z))+
   geom_point()+
   scale_colour_gradient(low="white",high="blue")+
   ggtitle("2005051100_f24 map")
@@ -42,22 +44,43 @@ wkdata<-data.frame(lat=c(forecast.table$lat,observation.table$lat),
 
 
  #kmeans
-K=100
-clusterk= kmeans(wkdata[,-3:-4],centers=K)
-cluster1 = wkdata[clusterk$cluster==1,]
+K=5
+#change for binary data
+wkdata$binary<-as.numeric(wkdata$z>0)*100
+clusterk= kmeans(wkdata[,c(1,2,5)],centers=K)
+clusterm= kmeans(cbind(wkdata[,1]*6,wkdata[,2],wkdata[,5]),centers=K)
+clusterz=kmeans(wkdata[,3],centers=K)
+sum(clusterz$cluster!=clusterk$cluster)
+#cluster1 = wkdata[clusterk$cluster==1,]
 #cluster2 = wkdata[clusterk$cluster==2,]
 #cluster3 = wkdata[clusterk$cluster==3,]
 #cluster4 = wkdata[clusterk$cluster==4,]
 
-wkdata$cluster<-clusterk$cluster
-ggplot(data=wkdata,aes(x=long,y=lat,colour=cluster))+
+wkdata$cluster<-clusterm$cluster
+cluster<-ggplot(data=wkdata,aes(x=long,y=lat,colour=cluster))+
   geom_point()
+  
+  +
+  scale_colour_gradient(low="white",high="dark green")
+  
+  cluster
 
   ratio<-rep(0,K)
   for(i in 1:K){
-	ratio[i]<-mean(wkdata[clusterk$cluster==i,3])
+	ratio[i]<-mean(wkdata[clusterk$cluster==i,5])
   }
  ratio
+ 
+ n<-NULL;
+ for(i in 1:K){
+ n<-c(n,sum(wkdata$cluster==i))}
+ n 
+ 
+ wkdata$ratio<-rep(0,dim(wkdata)[1])
+ for(i in 1:K){
+ wkdata$ratio[wkdata$cluster==i]<-rep(ratio[i],n[i])
+ }
+
  a<-which.max(ratio)
  
  test<-wkdata[clusterk$cluster==a,]
@@ -163,7 +186,7 @@ test$cut[test[,3]>0]<-temp.cutree[,4]
 test$cut<-as.factor(test$cut)
 complete<-ggplot()+
   geom_point(data=test,aes(x=long,y=lat,colour=cut))
-complete
+
 
 #wald's method
 result = agnes(test[test[,3]>0,-4:-5],diss = F, metric = "manhattan",
