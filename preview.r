@@ -42,21 +42,33 @@ wkdata<-data.frame(lat=c(forecast.table$lat,observation.table$lat),
                    z=c(forecast.table$z,observation.table$z),
                    group=rep(c("forecast","observation"),c(dim(forecast.table)[1],dim(observation.table)[1])))
 
+#introduce threshold
+threshold=20
+wkdata$z.mod<-wkdata$z
+wkdata$z.mod[wkdata$z<threshold]=0
+#modify data
+wkdata$binary<-as.numeric(wkdata$z>0)
+#standardlize
+data.stand<-data.frame(scale(wkdata[,c("lat","long","z.mod")]))
+colnames(data.stand)<-c("lat","long","z")
+plot(wkdata$long[wkdata$z>20],wkdata$lat[wkdata$z>20])
+#kmeans
+K=6
+clusterz=kmeans(data.stand,centers=K)
+wkdata$cluster<-clusterz$cluster
+cluster<-ggplot(data=wkdata,aes(x=long,y=lat,colour=cluster))+
+  geom_point()
+cluster
 
- #kmeans
-K=5
 #change for binary data
 wkdata$binary<-as.numeric(wkdata$z>0)*100
-clusterk= kmeans(wkdata[,c(1,2,5)],centers=K)
+clusterk= kmeans(wkdata[,c(1,2,6)],centers=K)
 clusterm= kmeans(cbind(wkdata[,1]*6,wkdata[,2],wkdata[,5]),centers=K)
 clusterz=kmeans(wkdata[,3],centers=K)
 sum(clusterz$cluster!=clusterk$cluster)
-#cluster1 = wkdata[clusterk$cluster==1,]
-#cluster2 = wkdata[clusterk$cluster==2,]
-#cluster3 = wkdata[clusterk$cluster==3,]
-#cluster4 = wkdata[clusterk$cluster==4,]
 
-wkdata$cluster<-clusterm$cluster
+
+wkdata$cluster<-clusterz$cluster
 cluster<-ggplot(data=wkdata,aes(x=long,y=lat,colour=cluster))+
   geom_point()
   
