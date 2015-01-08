@@ -85,11 +85,10 @@ T.result[5]<-T.fun(test005[test005$type=="fore",1:2],test005[test005$type=="obs"
 
 #F-stat
 F.fun<-function(X,Y){
-	n=dim(X)[1];
-	m=dim(Y)[1];
+	
 	S.X=cov(X);
 	S.Y=cov(Y);
-	S=(S.X*(n-1)+S.Y*(m-1))/(n+m-2)
+	#S=(S.X*(n-1)+S.Y*(m-1))/(n+m-2)
 	dd.X<-diag(S.X);
 	dd.Y<-diag(S.Y);
 	L.X<-t(S.X/dd.X);
@@ -103,8 +102,7 @@ F.result[3,]<-F.fun(test003[test003$type=="fore",1:2],test003[test003$type=="obs
 F.result[4,]<-F.fun(test004[test004$type=="fore",1:2],test004[test004$type=="obs",1:2])
 F.result[5,]<-F.fun(test005[test005$type=="fore",1:2],test005[test005$type=="obs",1:2])
 F.result
-library(int64)
-.Machine$integer.max
+
 
 
 
