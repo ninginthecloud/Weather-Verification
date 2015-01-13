@@ -8,7 +8,7 @@ x<-dim(data)[1]:1;
 y<-1:dim(data)[2];
 plotdata<-expand.grid(x=x,y=y);
 plotdata$z<-as.vector(data);
-levelplot(z~y*x,plotdata, terrain.colors);
+levelplot(z~y*x,plotdata,col.regions=terrain.colors);
 }
 anlydata<-function(obs,fore){
 x<-dim(obs)[1]:1;
@@ -25,8 +25,6 @@ return(anly.data)
 }
 ###read data
 obs<-data.matrix(read.table(file="E:\\Dropbox\\proj\\2014WeatherVerification\\data\\Cases20081023\\Cases\\Fake\\Geometric\\geom000_g240.txt"))
-obs<-data.matrix(obs)
-
 #----#50 pts. to the right
 fore001<-data.matrix(read.table(file="E:\\Dropbox\\proj\\2014WeatherVerification\\data\\Cases20081023\\Cases\\Fake\\Geometric\\geom001_g240.txt"))
 #----#200 pts. to the right
@@ -54,11 +52,13 @@ test005<-anlydata(obs,fore005);
 
 ###plot_data
 ###plot_combine_data
+pdf<-pdf("E:\\Dropbox\\proj\\2014WeatherVerification\\results\\ICP\\geo\\pic.pdf",width=10,height=6)
 myimage(matrix001);
 myimage(matrix002);
 myimage(matrix003);
 myimage(matrix004);
 myimage(matrix005);
+dev.off()
 
 ###error_analysis
 #ratio-stat
@@ -116,9 +116,10 @@ F.result
 
 a<-matrix(1:9,ncol=3)
 image(x=rep(1:3,each=3),y=rep(1:3,each=3),z=a)
-x<-dim(matrix001)[1]:1;
-y<-1:dim(obs)[2];
+x<-dim(a)[1]:1;
+y<-1:dim(a)[2];
 data<-expand.grid(x=x, y=y)
-data$z<-as.vector(test001[1:length(obs),3])
+data$z<-as.vector(a)
 data
-levelplot(z~y*x,data,col.regions =  terrain.colors)
+levelplot(z~y*x,data,col.regions = terrain.colors)
+myimage(a)
